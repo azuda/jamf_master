@@ -124,13 +124,15 @@ def main():
             rows.append({
                 "type": "mobile_device",
                 "id": d["mobileDeviceId"],
-                "name": d["general"].get("name") or d["general"].get("displayName", ""),
+                "name": d["general"].get("displayName", ""),
                 "serial_number": d.get("general", {}).get("serialNumber", ""),
                 "missing_fields": ";".join(missing),
             })
 
     if log_file:
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        dir_part = os.path.dirname(log_file)
+        if dir_part:
+            os.makedirs(dir_part, exist_ok=True)
         with open(log_file, "w", newline="") as f:
             writer = csv.DictWriter(
                 f, fieldnames=["type", "id", "name", "serial_number", "missing_fields"]
