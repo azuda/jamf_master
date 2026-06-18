@@ -75,5 +75,78 @@ def get_missing_fields(entry, fields):
 
 # ==================================================================================
 
+def main():
+    import time
+    from jamf_client import get_token, invalidate_token, make_session, jamf_get
+
+    log_file = os.environ.get("LOG_FILE")
+
+    access_token, expires_in = get_token()
+    token = {"t": access_token, "expiration": int(time.time()) + expires_in}
+    session = make_session()
+
+    computers = jamf_get(
+        "/api/v3/computers-inventory"
+        "?section=GENERAL&section=HARDWARE&section=USER_AND_LOCATION"
+        "&section=PURCHASING&section=EXTENSION_ATTRIBUTES"
+        "&page=0&page-size=2000&sort=id%3Aasc",
+        token, session,
+    ).json()["results"]
+
+    devices = jamf_get(
+        "/api/v2/mobile-devices/detail"
+        "?section=GENERAL&section=USER_AND_LOCATION&section=PURCHASING"
+        "&page=0&page-size=2000&sort=mobileDeviceId%3Aasc",
+        token, session,
+    ).json()["results"]
+
+    os.makedirs("debug", exist_ok=True)
+    with open("debug/c.json", "w") as f:
+        json.dump(computers, f, indent=2)
+    with open("debug/d.json", "w") as f:
+        json.dump(devices, f, indent=2)
+
+    rows = []
+    for c in computers:
+        missing = get_missing_fields(c, COMPUTER_FIELDS)
+        if missing:
+            rows.append({
+                "type": "computer",
+                "id": c["id"],
+                "name": c["general"]["name"],
+                "serial_number": c.get("hardware", {}).get("serialNumber", ""),
+                "missing_fields": ";".join(missing),
+            })
+
+    for d in devices:
+        missing = get_missing_fields(d, DEVICE_FIELDS)
+        if missing:
+            rows.append({
+                "type": "mobile_device",
+                "id": d["mobileDeviceId"],
+                "name": d["general"].get("name") or d["general"].get("displayName", ""),
+                "serial_number": d.get("general", {}).get("serialNumber", ""),
+                "missing_fields": ";".join(missing),
+            })
+
+    if log_file:
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        with open(log_file, "w", newline="") as f:
+            writer = csv.DictWriter(
+                f, fieldnames=["type", "id", "name", "serial_number", "missing_fields"]
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+
+    c_missing = sum(1 for r in rows if r["type"] == "computer")
+    d_missing = sum(1 for r in rows if r["type"] == "mobile_device")
+    print(f"Computers: {len(computers)} total, {c_missing} with missing fields")
+    print(f"Devices: {len(devices)} total, {d_missing} with missing fields")
+
+    invalidate_token(access_token)
+
+
+# ==================================================================================
+
 if __name__ == "__main__":
-    pass  # main() added in Task 3
+    main()
