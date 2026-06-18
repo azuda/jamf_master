@@ -85,67 +85,72 @@ def main():
     token = {"t": access_token, "expiration": int(time.time()) + expires_in}
     session = make_session()
 
-    computers = jamf_get(
-        "/api/v3/computers-inventory"
-        "?section=GENERAL&section=HARDWARE&section=USER_AND_LOCATION"
-        "&section=PURCHASING&section=EXTENSION_ATTRIBUTES"
-        "&page=0&page-size=2000&sort=id%3Aasc",
-        token, session,
-    ).json()["results"]
+    try:
+        computers_response = jamf_get(
+            "/api/v3/computers-inventory"
+            "?section=GENERAL&section=HARDWARE&section=USER_AND_LOCATION"
+            "&section=PURCHASING&section=EXTENSION_ATTRIBUTES"
+            "&page=0&page-size=2000&sort=id%3Aasc",
+            token, session,
+        )
+        computers_response.raise_for_status()
+        computers = computers_response.json()["results"]
 
-    devices = jamf_get(
-        "/api/v2/mobile-devices/detail"
-        "?section=GENERAL&section=USER_AND_LOCATION&section=PURCHASING"
-        "&page=0&page-size=2000&sort=mobileDeviceId%3Aasc",
-        token, session,
-    ).json()["results"]
+        devices_response = jamf_get(
+            "/api/v2/mobile-devices/detail"
+            "?section=GENERAL&section=USER_AND_LOCATION&section=PURCHASING"
+            "&page=0&page-size=2000&sort=mobileDeviceId%3Aasc",
+            token, session,
+        )
+        devices_response.raise_for_status()
+        devices = devices_response.json()["results"]
 
-    os.makedirs("debug", exist_ok=True)
-    with open("debug/c.json", "w") as f:
-        json.dump(computers, f, indent=2)
-    with open("debug/d.json", "w") as f:
-        json.dump(devices, f, indent=2)
+        os.makedirs("debug", exist_ok=True)
+        with open("debug/c.json", "w") as f:
+            json.dump(computers, f, indent=2)
+        with open("debug/d.json", "w") as f:
+            json.dump(devices, f, indent=2)
 
-    rows = []
-    for c in computers:
-        missing = get_missing_fields(c, COMPUTER_FIELDS)
-        if missing:
-            rows.append({
-                "type": "computer",
-                "id": c["id"],
-                "name": c["general"]["name"],
-                "serial_number": c.get("hardware", {}).get("serialNumber", ""),
-                "missing_fields": ";".join(missing),
-            })
+        rows = []
+        for c in computers:
+            missing = get_missing_fields(c, COMPUTER_FIELDS)
+            if missing:
+                rows.append({
+                    "type": "computer",
+                    "id": c["id"],
+                    "name": c["general"]["name"],
+                    "serial_number": c.get("hardware", {}).get("serialNumber", ""),
+                    "missing_fields": ";".join(missing),
+                })
 
-    for d in devices:
-        missing = get_missing_fields(d, DEVICE_FIELDS)
-        if missing:
-            rows.append({
-                "type": "mobile_device",
-                "id": d["mobileDeviceId"],
-                "name": d["general"].get("displayName", ""),
-                "serial_number": d.get("general", {}).get("serialNumber", ""),
-                "missing_fields": ";".join(missing),
-            })
+        for d in devices:
+            missing = get_missing_fields(d, DEVICE_FIELDS)
+            if missing:
+                rows.append({
+                    "type": "mobile_device",
+                    "id": d["mobileDeviceId"],
+                    "name": d["general"].get("displayName", ""),
+                    "serial_number": d.get("general", {}).get("serialNumber", ""),
+                    "missing_fields": ";".join(missing),
+                })
 
-    if log_file:
-        dir_part = os.path.dirname(log_file)
-        if dir_part:
-            os.makedirs(dir_part, exist_ok=True)
-        with open(log_file, "w", newline="") as f:
-            writer = csv.DictWriter(
-                f, fieldnames=["type", "id", "name", "serial_number", "missing_fields"]
-            )
-            writer.writeheader()
-            writer.writerows(rows)
+        if log_file:
+            dir_part = os.path.dirname(log_file)
+            if dir_part:
+                os.makedirs(dir_part, exist_ok=True)
+            with open(log_file, "w", newline="") as f:
+                writer = csv.DictWriter(
+                    f, fieldnames=["type", "id", "name", "serial_number", "missing_fields"]
+                )
+                writer.writeheader()
+                writer.writerows(rows)
 
-    c_missing = sum(1 for r in rows if r["type"] == "computer")
-    d_missing = sum(1 for r in rows if r["type"] == "mobile_device")
-    print(f"Computers: {len(computers)} total, {c_missing} with missing fields")
-    print(f"Devices: {len(devices)} total, {d_missing} with missing fields")
-
-    invalidate_token(access_token)
+        c_missing = sum(1 for r in rows if r["type"] == "computer")
+        d_missing = sum(1 for r in rows if r["type"] == "mobile_device")
+        print(f"Computers: {len(computers)} total, {c_missing} with missing fields")
+        print(f"Devices: {len(devices)} total, {d_missing} with missing fields")
+    finally:
+        invalidate_token(access_token)
 
 
 # ==================================================================================
