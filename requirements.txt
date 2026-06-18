@@ -1,0 +1,2 @@
+-e ../jamf_client
+pytest
