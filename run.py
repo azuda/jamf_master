@@ -46,9 +46,9 @@ COMPUTER_FIELDS = [
 ]
 
 DEVICE_FIELDS = [
-    ("name",          lambda d: d["general"]["name"]),
+    ("name",          lambda d: d["general"]["displayName"]),
     ("assetTag",      lambda d: d["general"]["assetTag"]),
-    ("site",          lambda d: d["general"]["site"]["name"]),
+    ("site",          lambda d: None if d["general"].get("siteId", -1) in (None, -1) else d["general"]["siteId"]),
     ("username",      lambda d: d["userAndLocation"]["username"]),
     ("fullName",      lambda d: d["userAndLocation"]["realName"]),
     ("email",         lambda d: d["userAndLocation"]["emailAddress"]),

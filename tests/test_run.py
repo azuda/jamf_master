@@ -89,10 +89,10 @@ def test_computer_missing_ext_attr_absent():
 def _full_device():
     return {
         "general": {
-            "name": "iPad-RCS-001",
+            "displayName": "iPad-RCS-001",
             "assetTag": "RCS-001",
             "serialNumber": "DMPXXXXXXX",
-            "site": {"name": "RCS"},
+            "siteId": 4,
         },
         "userAndLocation": {
             "username": "jsmith",
@@ -130,3 +130,13 @@ def test_device_multiple_missing():
     result = get_missing_fields(d, DEVICE_FIELDS)
     assert "assetTag" in result
     assert "vendor" in result
+
+def test_device_jamf_site_sentinel():
+    d = _full_device()
+    d["general"]["siteId"] = -1
+    assert "site" in get_missing_fields(d, DEVICE_FIELDS)
+
+def test_device_site_null_missing():
+    d = _full_device()
+    d["general"]["siteId"] = None
+    assert "site" in get_missing_fields(d, DEVICE_FIELDS)
