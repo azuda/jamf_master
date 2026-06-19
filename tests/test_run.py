@@ -1,4 +1,4 @@
-from run import is_missing, get_missing_fields, COMPUTER_FIELDS, DEVICE_FIELDS
+from run import is_missing, get_missing_fields, COMPUTER_FIELDS, DEVICE_FIELDS, _extract_device_serial
 
 
 # ── is_missing ──────────────────────────────────────────────────────────────
@@ -140,3 +140,18 @@ def test_device_site_null_missing():
     d = _full_device()
     d["general"]["siteId"] = None
     assert "site" in get_missing_fields(d, DEVICE_FIELDS)
+
+
+# ── serial number extraction — mobile devices ────────────────────────────────
+
+def test_device_serial_from_hardware():
+    d = {"hardware": {"serialNumber": "DMPTEST12345"}, "general": {}}
+    assert _extract_device_serial(d) == "DMPTEST12345"
+
+def test_device_serial_hardware_null_returns_empty():
+    d = {"hardware": None, "general": {}}
+    assert _extract_device_serial(d) == ""
+
+def test_device_serial_hardware_missing_returns_empty():
+    d = {"general": {}}
+    assert _extract_device_serial(d) == ""

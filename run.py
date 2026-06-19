@@ -62,6 +62,11 @@ DEVICE_FIELDS = [
 ]
 
 
+def _extract_device_serial(d):
+    hw = d.get("hardware") or {}
+    return hw.get("serialNumber", "")
+
+
 def get_missing_fields(entry, fields):
     missing = []
     for label, extractor in fields:
@@ -98,7 +103,7 @@ def main():
 
         devices_response = jamf_get(
             "/api/v2/mobile-devices/detail"
-            "?section=GENERAL&section=USER_AND_LOCATION&section=PURCHASING"
+            "?section=GENERAL&section=HARDWARE&section=USER_AND_LOCATION&section=PURCHASING"
             "&page=0&page-size=2000&sort=mobileDeviceId%3Aasc",
             token, session,
         )
@@ -130,7 +135,7 @@ def main():
                     "type": "mobile_device",
                     "id": d["mobileDeviceId"],
                     "name": d["general"].get("displayName", ""),
-                    "serial_number": d.get("general", {}).get("serialNumber", ""),
+                    "serial_number": _extract_device_serial(d),
                     "missing_fields": ";".join(missing),
                 })
 
