@@ -65,6 +65,11 @@ DEVICE_FIELDS = [
 ]
 
 
+def _extract_computer_serial(c):
+  hw = c.get("hardware") or {}
+  return hw.get("serialNumber", "")
+
+
 def _extract_device_serial(d):
   hw = d.get("hardware") or {}
   return hw.get("serialNumber", "")
@@ -142,7 +147,7 @@ def main():
           "type": "computer",
           "id": c["id"],
           "name": c["general"]["name"],
-          "serial_number": c.get("hardware", {}).get("serialNumber", ""),
+          "serial_number": _extract_computer_serial(c),
           "missing_fields": ";".join(missing),
         })
 

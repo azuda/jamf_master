@@ -10,7 +10,7 @@ export LOG_FILE="$LOG_DIR/$timestamp.csv"
 mkdir -p "$LOG_DIR"
 
 # keep the 7 most recent logs; prune before adding new one so max = 7 after run
-ls -1t "$LOG_DIR"/*.csv 2>/dev/null | tail -n +7 | while IFS= read -r f; do
+ls -1t "$LOG_DIR"/*.csv 2>/dev/null | tail -n +8 | while IFS= read -r f; do
   rm -f "$f"
 done
 
