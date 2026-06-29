@@ -8,7 +8,10 @@ timestamp=$(date '+%Y%m%d %H%M')
 export LOG_FILE="$LOG_DIR/$timestamp.csv"
 
 mkdir -p "$LOG_DIR"
-ls -1t "$LOG_DIR" | tail -n +9 | xargs -I {} rm -f "$LOG_DIR/{}"
+find "$LOG_DIR" -maxdepth 1 -name "*.csv" -print0 \
+  | xargs -0 ls -1t \
+  | tail -n +9 \
+  | xargs -I {} rm -f "$LOG_DIR/{}"
 
 echo "Script start @ $(date)"
 $VENV -u run.py
