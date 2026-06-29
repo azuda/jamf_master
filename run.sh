@@ -8,10 +8,11 @@ timestamp=$(date '+%Y%m%d %H%M')
 export LOG_FILE="$LOG_DIR/$timestamp.csv"
 
 mkdir -p "$LOG_DIR"
-find "$LOG_DIR" -maxdepth 1 -name "*.csv" -print0 \
-  | xargs -0 ls -1t \
-  | tail -n +9 \
-  | xargs -I {} rm -f "$LOG_DIR/{}"
+
+# keep the 7 most recent logs; prune before adding new one so max = 7 after run
+ls -1t "$LOG_DIR"/*.csv 2>/dev/null | tail -n +7 | while IFS= read -r f; do
+  rm -f "$f"
+done
 
 echo "Script start @ $(date)"
 $VENV -u run.py
