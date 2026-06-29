@@ -10,7 +10,6 @@ import os
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-TESTING = False
 
 # ==================================================================================
 
@@ -82,48 +81,58 @@ def get_missing_fields(entry, fields):
       missing.append(label)
   return missing
 
+
+def _jamf_get_all(endpoint_base, token, session, get_fn):
+  page, page_size = 0, 2000
+  results = []
+  while True:
+    resp = get_fn(f"{endpoint_base}&page={page}&page-size={page_size}", token, session)
+    resp.raise_for_status()
+    body = resp.json()
+    results.extend(body["results"])
+    if len(results) >= body.get("totalCount", len(results)):
+      break
+    page += 1
+  return results
+
 # ==================================================================================
 
 def main():
   import time
-  from jamf_client import get_token, invalidate_token, make_session, jamf_get
+  from jamf_client import init, get_token, invalidate_token, make_session, jamf_get
 
   log_file = os.environ.get("LOG_FILE")
   if not log_file:
     print("Warning: LOG_FILE not set — results will not be saved", file=sys.stderr)
 
+  init()
   access_token, expires_in = get_token()
   token = {"t": access_token, "expiration": int(time.time()) + expires_in}
   session = make_session()
 
   try:
-    computers_response = jamf_get(
+    computers = _jamf_get_all(
       "/api/v3/computers-inventory"
       "?section=GENERAL&section=HARDWARE&section=USER_AND_LOCATION"
       "&section=PURCHASING&section=EXTENSION_ATTRIBUTES"
-      "&page=0&page-size=2000&sort=id%3Aasc",
-      token, session,
+      "&sort=id%3Aasc",
+      token, session, jamf_get,
     )
-    computers_response.raise_for_status()
-    computers = computers_response.json()["results"]
 
-    devices_response = jamf_get(
+    devices = _jamf_get_all(
       "/api/v2/mobile-devices/detail"
       "?section=GENERAL&section=HARDWARE&section=USER_AND_LOCATION&section=PURCHASING"
-      "&page=0&page-size=2000&sort=mobileDeviceId%3Aasc",
-      token, session,
+      "&sort=mobileDeviceId%3Aasc",
+      token, session, jamf_get,
     )
-    devices_response.raise_for_status()
-    devices = devices_response.json()["results"]
 
-    if TESTING:
-      if os.environ.get("DEBUG_DUMP"):
-        debug_dir = os.path.join(SCRIPT_DIR, "debug")
-        os.makedirs(debug_dir, exist_ok=True)
-        with open(os.path.join(debug_dir, "c.json"), "w") as f:
-          json.dump(computers, f, indent=2)
-        with open(os.path.join(debug_dir, "d.json"), "w") as f:
-          json.dump(devices, f, indent=2)
+    if os.environ.get("DEBUG_DUMP"):
+      debug_dir = os.path.join(SCRIPT_DIR, "debug")
+      os.makedirs(debug_dir, exist_ok=True)
+      with open(os.path.join(debug_dir, "c.json"), "w") as f:
+        json.dump(computers, f, indent=2)
+      with open(os.path.join(debug_dir, "d.json"), "w") as f:
+        json.dump(devices, f, indent=2)
 
     rows = []
     for c in computers:

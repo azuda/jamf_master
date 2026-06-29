@@ -1,10 +1,10 @@
 #!/bin/sh
 
-PROJECT="$PWD"
+PROJECT="$(cd "$(dirname "$0")" && pwd)"
 VENV="$PROJECT/.venv/bin/python3"
 
 LOG_DIR="$PROJECT/logs"
-timestamp=$(date '+%Y%m%d %H%M')
+timestamp=$(date '+%Y%m%d_%H%M')
 export LOG_FILE="$LOG_DIR/$timestamp.csv"
 
 mkdir -p "$LOG_DIR"
@@ -15,5 +15,5 @@ ls -1t "$LOG_DIR"/*.csv 2>/dev/null | tail -n +7 | while IFS= read -r f; do
 done
 
 echo "Script start @ $(date)"
-$VENV -u run.py
+$VENV -u "$PROJECT/run.py"
 echo "Script done @ $(date)"
